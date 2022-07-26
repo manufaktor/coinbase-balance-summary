@@ -4,6 +4,7 @@ require "sqlite3"
 require 'bigdecimal'
 
 default_csv_file = "coinbase.csv"
+default_date = Date.today
 
 puts "Welcome"
 puts "Please enter the path to a full transaction report CSV file from coinbase"
@@ -14,7 +15,13 @@ puts "Default: coinbase.csv"
 csv_file = gets.chomp.presence
 csv_file ||= default_csv_file
 
-puts "Calculated balances for #{csv_file}"
+puts "Choose a date to see balance at that point in time (default: #{default_date}):"
+
+date = gets.chomp.presence
+date = Date.parse(date) if date.present?
+date ||= default_date
+
+puts "Calculated balances for #{csv_file} on #{date}"
 
 # `cat << EOF | ` closes the interactive sqlite3 process
 system(%Q{rm transactions.db && cat << EOF | sqlite3 -cmd ".import --csv #{csv_file} transactions" transactions.db})
@@ -115,7 +122,7 @@ end
 
 ledgers = Ledgers.new
 
-db.execute("select * from transactions").each do |row|
+db.execute('select * from transactions where DATE("Timestamp") <= ?', date.to_s).each do |row|
   tx = Tx.new(row)
   ledger = ledgers.fetch(tx.coin)
 
